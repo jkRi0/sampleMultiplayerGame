@@ -102,21 +102,37 @@
         const db = getDatabase(app);
         const messagesRef = ref(db, "messages");
 
-        
-
+        //HANDLE OTHER PLAYERS MOVEMENT
         onValue(messagesRef, (snapshot) => {
             snapshot.forEach(childSnapshot => {
                 const key = childSnapshot.key;
                 const data = childSnapshot.val();
 
-                const box = document.getElementById(`box${key}`);
-                box.style.left = `${data.playerPOS}px`;
+                const otherBox = document.getElementById(`box${key}`);
+                otherBox.style.left = `${data.playerPOS}px`;
+
+                // data.movingRight? flipImage(true, otherBox):flipImage(false, otherBox);
+                const img1 = otherBox.querySelector('.img1');
+                const img2 = otherBox.querySelector('.img2');
+                if(data.movingRight){
+                    img1.style.transform = 'scaleX(1)';
+                    img2.style.transform = 'scaleX(1)';
+                }else{
+                    img1.style.transform = 'scaleX(-1)';
+                    img2.style.transform = 'scaleX(-1)';
+                }
+
             });
         });
 
         //VERIFYING PLAYER'S CONNECTIVITY
         const dbRef = ref(db);
         let storeProperty = [];
+        //0 = key
+        //1 = playerPOS
+        //2 = worldPOS
+        //3 = movingRight
+
         let isInserted = false;
         get(child(dbRef, 'messages'))
         .then((snapshot) => {
@@ -136,6 +152,7 @@
                             storeProperty[0]=key;
                             storeProperty[1]=message.playerPOS;
                             storeProperty[2]=message.worldPOS;
+                            storeProperty[3]=message.movingRight;
 
                             console.log("already inserted "+storeProperty[0]);
                         }
@@ -145,9 +162,10 @@
                 if(!isInserted){
                     //INSERT NEW PLAYER ON RTDB
                     push(messagesRef, { 
+                        movingRight: false,
                         playerID: myID,
                         playerPOS: 150,
-                        worldPOS: 0
+                        worldPOS: 0,
                     });
                     console.log("player inserted "+storeProperty[0]);
                 }
@@ -175,6 +193,7 @@
             `;
 
             const playersContainer = document.getElementById("players");
+            
             playersContainer.appendChild(boxElement);
 
             const box = document.getElementById(`box${key}`);
@@ -192,10 +211,15 @@
             //FOR NEW INSERTED PLAYER
             if(message.playerID==myID){
                 storeProperty[0]=key;
+                storeProperty[1]=message.playerPOS;
+                storeProperty[2]=message.worldPOS;
+                storeProperty[3]=message.movingRight;
             }
         });
 
         
+        //=================================PLAYER CONTROLLS=========================================
+
         setTimeout(() => {
             const world = document.getElementById('world');
             const box = document.getElementById(`box${storeProperty[0]}`);
@@ -204,17 +228,20 @@
             let boxX = storeProperty[1];
             let bgX = storeProperty[2];
             let intervalId = null;
+            
 
             const updatePositions = () => {
+                // console.log(boxX+"   "+(bgX));
 
                 //UPDATE THE PLAYERS POSITION IN RTDB
                 update(ref(getDatabase(), 'messages/' + storeProperty[0]), { playerPOS: boxX });
                 update(ref(getDatabase(), 'messages/' + storeProperty[0]), { worldPOS: bgX });
+                update(ref(getDatabase(), 'messages/' + storeProperty[0]), { movingRight: storeProperty[3] });
 
                 box.style.left = `${boxX}px`;
                 world.style.left = `${bgX}px`;
 
-                console.log(boxX+"   "+(bgX));
+                
             };
 
             const move = (dir) => {
@@ -234,8 +261,11 @@
                             bgX += step;
                         }
                     }
-                    img1.style.transform = 'scaleX(-1)';
-                    img2.style.transform = 'scaleX(-1)';
+
+                    //STORE MOVEMENT TO LEFT
+                    storeProperty[3]=false;
+
+                    flipImage(false, box);
                 }
                 //MOVE TO THE RIGHT
                 if (dir === 'right') {
@@ -256,16 +286,18 @@
                             boxX += step;
                         }
                     }
-                    img1.style.transform = 'scaleX(1)';
-                    img2.style.transform = 'scaleX(1)';
+
+                    //STORE MOVEMENT TO RIGHT
+                    storeProperty[3]=true;
+
+                    flipImage(true, box);
                 }
 
-                box.style.backgroundColor = 'red';
-                img1.style.visibility = "hidden";
-                img2.style.visibility = "visible";
+                
 
                 updatePositions();
             };
+
             document.addEventListener('keydown', (e) => {
                 if (intervalId) return;
 
@@ -289,10 +321,44 @@
             });
 
             updatePositions();
+
+
+            function flipImage(toRight, tempBox){
+                const img1 = tempBox.querySelector('.img1');
+                const img2 = tempBox.querySelector('.img2');
+
+                if(toRight){
+                    img1.style.transform = 'scaleX(1)';
+                    img2.style.transform = 'scaleX(1)';
+                }else{
+                    img1.style.transform = 'scaleX(-1)';
+                    img2.style.transform = 'scaleX(-1)';
+                }
+
+                box.style.backgroundColor = 'red';
+                img1.style.visibility = "hidden";
+                img2.style.visibility = "visible";
+            }
+
         }, 1000);
         
         
-        
+        function flipImage(toRight, tempBox){
+                const img1 = tempBox.querySelector('.img1');
+                const img2 = tempBox.querySelector('.img2');
+
+                if(toRight){
+                    img1.style.transform = 'scaleX(1)';
+                    img2.style.transform = 'scaleX(1)';
+                }else{
+                    img1.style.transform = 'scaleX(-1)';
+                    img2.style.transform = 'scaleX(-1)';
+                }
+
+                box.style.backgroundColor = 'red';
+                img1.style.visibility = "hidden";
+                img2.style.visibility = "visible";
+            }
 
         
     </script>
