@@ -108,8 +108,9 @@
             snapshot.forEach(childSnapshot => {
                 const key = childSnapshot.key;
                 const data = childSnapshot.val();
-                console.log("Update on:", key, data);
-                // Do something with each updated message
+
+                const box = document.getElementById(`box${key}`);
+                box.style.left = `${data.playerPOS}px`;
             });
         });
 
